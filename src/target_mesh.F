@@ -127,15 +127,20 @@ module target_mesh
         allocate(mesh % lats(1, mesh % nLat))
         allocate(mesh % lons(mesh % nLon, 1))
 
-        delta = (mesh % endLat - mesh % startLat) / real(mesh % nLat)
+        ! CSS...the modifications here, when using nLat = 361, allows interpolation to 
+        ! NCEP grid 004, which is 0.5 degrees, with lats/lons ending in ".0" and ".5"
+        !delta = (mesh % endLat - mesh % startLat) / real(mesh % nLat) ! CSS commented out
+        delta = (mesh % endLat - mesh % startLat) / real(mesh % nLat - 1) ! CSS added in
         do i=0,mesh % nLat-1
-           mesh % lats(1,i+1) = mesh % startLat + 0.5 * delta + real(i) * delta
+          !mesh % lats(1,i+1) = mesh % startLat + 0.5 * delta + real(i) * delta ! CSS commented out
+           mesh % lats(1,i+1) = mesh % startLat + real(i) * delta  ! CSS, get rid of 0.5 * delta
            mesh % lats(1,i+1) = mesh % lats(1,i+1) * pi_const / 180.0
         end do
 
         delta = (mesh % endLon - mesh % startLon) / real(mesh % nLon)
         do i=0,mesh % nLon-1
-           mesh % lons(i+1,1) = mesh % startLon + 0.5 * delta + real(i) * delta
+          !mesh % lons(i+1,1) = mesh % startLon + 0.5 * delta + real(i) * delta ! CSS commented out
+           mesh % lons(i+1,1) = mesh % startLon + real(i) * delta ! CSS get rid of 0.5 * delta
            mesh % lons(i+1,1) = mesh % lons(i+1,1) * pi_const / 180.0
         end do
 
