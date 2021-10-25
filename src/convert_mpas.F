@@ -18,7 +18,7 @@ program convert_mpas
                          write_timer
 
     integer :: stat
-    character (len=1024) :: mesh_filename, data_filename
+    character (len=1024) :: mesh_filename, data_filename, out_prefix, out_suffix
     type (mpas_mesh_type) :: source_mesh
     type (target_mesh_type) :: destination_mesh
     type (input_handle_type) :: handle
@@ -28,6 +28,7 @@ program convert_mpas
     type (target_field_type) :: target_field
     type (field_list_type) :: include_field_list, exclude_field_list
 
+    integer :: ppos
     integer :: iRec
     integer :: nRecordsIn, nRecordsOut
     integer :: iFile
@@ -95,23 +96,6 @@ program convert_mpas
     write(0,'(a,f10.6,a)') '    Time to compute remap weights: ', timer_time(remap_timer), ' s'
 
     !
-    ! Open output file
-    !
-    if (file_output_open('latlon.nc', output_handle, mode=FILE_MODE_APPEND, nRecords=nRecordsOut) /= 0) then
-        write(0,*) 'Error: Problems opening output file'
-        stat = mpas_mesh_free(source_mesh)
-        stat = target_mesh_free(destination_mesh)
-        stat = remap_info_free(remap_info)
-        stop 5
-    end if
-
-    if (nRecordsOut /= 0) then
-        write(0,*) 'Existing output file has ', nRecordsOut, ' records'
-    else
-        write(0,*) 'Created a new output file'
-    end if
-
-    !
     ! Get list of fields to include or exclude from input file
     !
     stat = field_list_init(include_field_list, exclude_field_list)
@@ -123,6 +107,26 @@ program convert_mpas
     do iFile=fileArgStart,nArgs
         call get_command_argument(iFile, data_filename)
         write(0,*) 'Remapping MPAS fields from file '''//trim(data_filename)//''''
+
+        !
+        ! Open output file
+        !
+        ppos=scan(data_filename,'.',BACK=.true.)
+        !if (file_output_open(trim(data_filename)//'_latlon', output_handle, mode=FILE_MODE_APPEND, nRecords=nRecordsOut) /= 0) then
+        !if (file_output_open(scan(trim(data_filename),'.',BACK=.true.)//'_latlon.'//scan(trim(data_filename),"."), output_handle, mode=FILE_MODE_APPEND, nRecords=nRecordsOut) /= 0) then
+        if (file_output_open(data_filename(1:ppos-1)//'_latlon.nc', output_handle, mode=FILE_MODE_APPEND, nRecords=nRecordsOut) /= 0) then
+            write(0,*) 'Error: Problems opening output file'
+            stat = mpas_mesh_free(source_mesh)
+            stat = target_mesh_free(destination_mesh)
+            stat = remap_info_free(remap_info)
+            stop 5
+        end if
+
+        if (nRecordsOut /= 0) then
+            write(0,*) 'Existing output file has ', nRecordsOut, ' records'
+        else
+            write(0,*) 'Created a new output file'
+        end if
 
         !
         ! Open input data file
@@ -241,13 +245,14 @@ program convert_mpas
     
         nRecordsOut = nRecordsOut + nRecordsIn
         stat = scan_input_close(handle)
+
+        stat = file_output_close(output_handle)
     end do
 
 
     !
     ! Cleanup
     !
-    stat = file_output_close(output_handle)
 
     stat = mpas_mesh_free(source_mesh)
     stat = target_mesh_free(destination_mesh)
